@@ -1,0 +1,64 @@
+version: "3.7"
+
+services:
+  traefik:
+    image: traefik:v2.6
+    command:
+      # Entrypoints configuration
+      - --entrypoints.web.address=:80
+      # Docker provider configuration
+      - --providers.docker=true
+      # Makes sure that services have to explicitly direct Traefik to expose them
+      - --providers.docker.exposedbydefault=false
+      # Use the secure docker socket proxy
+      - --providers.docker.endpoint=tcp://socket_proxy:2375
+      # Default docker network to use for connections to all containers
+      - --providers.docker.network=traefik_public
+      # Logging levels are DEBUG, PANIC, FATAL, ERROR, WARN, and INFO.
+      - --log.level=info
+    ports:
+      - 80:80
+    networks:
+      - traefik_public
+      - socket_proxy
+    restart: unless-stopped
+    depends_on:
+      - socket_proxy
+
+  whoami:
+    image: containous/whoami:latest
+    labels:
+      # Explicitly instruct Traefik to expose this service
+      - traefik.enable=true
+      # Router configuration
+      ## Rule based on the Host and the PathPrefix of the request
+      - traefik.http.routers.whoami_route.entrypoints=web
+      - traefik.http.routers.whoami_route.rule=Host(`whoami.karvounis.tutorial`) && PathPrefix(`/whoami`)
+      - traefik.http.routers.whoami_route.service=whoami_service
+      # Service configuration
+      ## 80 is the port that the whoami container is listening to
+      - traefik.http.services.whoami_service.loadbalancer.server.port=80
+    networks:
+      - traefik_public
+
+  # https://github.com/Tecnativa/docker-socket-proxy
+  # Security-enhanced proxy for the Docker Socket
+  # Giving access to your Docker socket could mean giving root access to your host, or even to your whole swarm, but some services require hooking into that socket to react to events, etc. Using this proxy lets you block anything you consider those services should not do.
+  socket_proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    restart: unless-stopped
+    environment:
+      NETWORKS: 1
+      SERVICES: 1
+      CONTAINERS: 1
+      TASKS: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - socket_proxy
+
+networks:
+  traefik_public:
+    external: true
+  socket_proxy:
+    external: true
