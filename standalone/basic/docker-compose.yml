@@ -25,15 +25,17 @@ services:
     depends_on:
       - socket_proxy
 
+  # https://github.com/traefik/whoami
   whoami:
-    image: containous/whoami:latest
+    image: traefik/whoami:v1.7.1
     labels:
       # Explicitly instruct Traefik to expose this service
       - traefik.enable=true
       # Router configuration
-      ## Rule based on the Host and the PathPrefix of the request
+      ## Listen to the `web` entrypoint
       - traefik.http.routers.whoami_route.entrypoints=web
-      - traefik.http.routers.whoami_route.rule=Host(`whoami.karvounis.tutorial`) && PathPrefix(`/whoami`)
+      ## Rule based on the Host of the request
+      - traefik.http.routers.whoami_route.rule=Host(`whoami.karvounis.tutorial`)
       - traefik.http.routers.whoami_route.service=whoami_service
       # Service configuration
       ## 80 is the port that the whoami container is listening to
