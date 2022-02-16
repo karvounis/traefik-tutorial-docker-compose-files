@@ -6,7 +6,6 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-added-large-files
-      - id: detect-private-key
       - id: detect-aws-credentials
       - id: destroyed-symlinks
       - id: check-merge-conflict
