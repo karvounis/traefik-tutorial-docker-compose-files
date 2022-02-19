@@ -8,31 +8,40 @@ services:
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
-      # Docker provider configuration
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --providers.docker.endpoint=tcp://socket_proxy:2375
       - --providers.docker.network=traefik_public
-      # File provider configuration
       - --providers.file.directory=/traefik/config/my_dynamic_conf
-      # Logging configuration
       - --log.level=info
       - --api.dashboard=true
+      # Prometheus metrics https://doc.traefik.io/traefik/observability/metrics/prometheus/
+      ## Enable prometheus metrics
+      - --metrics.prometheus=true
+      ## Create a manual router instead of the default one. We want to use the existing `websecure` endpoint
+      - --metrics.prometheus.manualrouting=true
+      ### Enable metrics on routers https://doc.traefik.io/traefik/observability/metrics/prometheus/#addrouterslabels
+      - --metrics.prometheus.addrouterslabels=true
     labels:
       - traefik.enable=true
       - traefik.http.routers.dashboard.rule=Host(`traefik.karvounis.tutorial`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
       - traefik.http.routers.dashboard.tls=true
       - traefik.http.routers.dashboard.entrypoints=websecure
       - traefik.http.routers.dashboard.service=api@internal
+      # `metrics` router configuration
+      - traefik.http.routers.metrics.rule=Host(`traefik.karvounis.tutorial`) && PathPrefix(`/metrics`)
+      - traefik.http.routers.metrics.tls=true
+      - traefik.http.routers.metrics.entrypoints=websecure
+      - traefik.http.routers.metrics.service=prometheus@internal
       # Middlewares
       - traefik.http.routers.dashboard.middlewares=dashboard_auth
+      - traefik.http.routers.metrics.middlewares=dashboard_auth
       - traefik.http.middlewares.dashboard_auth.basicauth.users=dashboard:$$2y$$05$$T/WVjQVqBc24NLUNI/xuVu0V2B.RPY50k2.CCH5JHGInb3EUeaDcO
       - traefik.http.middlewares.digest_auth.digestauth.users=whoami:traefik:f4ba293a96d5dcf51eb2f03b5931dd96
       - traefik.http.middlewares.secured_chain.chain.middlewares=simple_ratelimit,digest_auth
-      ## The `simple_ratelimit` middleware allows an average of 5 requests per 5 seconds and a burst of 2 requests.
       - traefik.http.middlewares.simple_ratelimit.ratelimit.average=5
-      - traefik.http.middlewares.simple_ratelimit.ratelimit.period=5s
       - traefik.http.middlewares.simple_ratelimit.ratelimit.burst=2
+      - traefik.http.middlewares.simple_ratelimit.ratelimit.period=5s
     ports:
       - 80:80
       - 443:443
@@ -55,7 +64,6 @@ services:
       - traefik.http.routers.whoami_route.rule=Host(`whoami.karvounis.tutorial`)
       - traefik.http.routers.whoami_route.service=whoami_service
       - traefik.http.routers.whoami_route.tls=true
-      # Use the chain
       - traefik.http.routers.whoami_route.middlewares=secured_chain
       - traefik.http.services.whoami_service.loadbalancer.server.port=80
     networks:
