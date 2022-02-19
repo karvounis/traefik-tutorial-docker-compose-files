@@ -14,6 +14,7 @@ services:
       - --providers.docker.network=traefik_public
       - --providers.file.directory=/traefik/config/my_dynamic_conf
       - --log.level=info
+      - --log.format=json
       - --api.dashboard=true
       # Prometheus metrics https://doc.traefik.io/traefik/observability/metrics/prometheus/
       ## Enable prometheus metrics

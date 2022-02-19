@@ -18,6 +18,7 @@ services:
       - --providers.file.directory=/traefik/config/my_dynamic_conf
       # Logging configuration
       - --log.level=info
+      - --log.format=json
     ports:
       - 80:80
       - 443:443
