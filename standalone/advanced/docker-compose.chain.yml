@@ -1,0 +1,82 @@
+version: "3.7"
+
+services:
+  traefik:
+    image: traefik:v2.6
+    command:
+      # Entrypoints configuration
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      # Docker provider configuration
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.endpoint=tcp://socket_proxy:2375
+      - --providers.docker.network=traefik_public
+      # File provider configuration
+      - --providers.file.directory=/traefik/config/my_dynamic_conf
+      # Logging configuration
+      - --log.level=info
+      - --api.dashboard=true
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dashboard.rule=Host(`traefik.karvounis.tutorial`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
+      - traefik.http.routers.dashboard.tls=true
+      - traefik.http.routers.dashboard.entrypoints=websecure
+      - traefik.http.routers.dashboard.service=api@internal
+      # Middlewares
+      - traefik.http.routers.dashboard.middlewares=dashboard_auth
+      - traefik.http.middlewares.dashboard_auth.basicauth.users=dashboard:$$2y$$05$$T/WVjQVqBc24NLUNI/xuVu0V2B.RPY50k2.CCH5JHGInb3EUeaDcO
+      - traefik.http.middlewares.digest_auth.digestauth.users=whoami:traefik:f4ba293a96d5dcf51eb2f03b5931dd96
+      - traefik.http.middlewares.secured_chain.chain.middlewares=simple_ratelimit,digest_auth
+      ## The `simple_ratelimit` middleware allows an average of 5 requests per 5 seconds and a burst of 2 requests.
+      - traefik.http.middlewares.simple_ratelimit.ratelimit.average=5
+      - traefik.http.middlewares.simple_ratelimit.ratelimit.burst=2
+      - traefik.http.middlewares.simple_ratelimit.ratelimit.period=5s
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./certs/traefik:/traefik/config/certs:ro
+      - ./config.yml:/traefik/config/my_dynamic_conf/conf.yml:ro
+    networks:
+      - traefik_public
+      - socket_proxy
+    restart: unless-stopped
+    depends_on:
+      - socket_proxy
+
+  # https://github.com/traefik/whoami
+  whoami:
+    image: traefik/whoami:v1.7.1
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.whoami_route.entrypoints=websecure
+      - traefik.http.routers.whoami_route.rule=Host(`whoami.karvounis.tutorial`)
+      - traefik.http.routers.whoami_route.service=whoami_service
+      - traefik.http.routers.whoami_route.tls=true
+      # Use the chain
+      - traefik.http.routers.whoami_route.middlewares=secured_chain
+      - traefik.http.services.whoami_service.loadbalancer.server.port=80
+    networks:
+      - traefik_public
+
+  # https://github.com/Tecnativa/docker-socket-proxy
+  socket_proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    restart: unless-stopped
+    environment:
+      NETWORKS: 1
+      SERVICES: 1
+      CONTAINERS: 1
+      TASKS: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - socket_proxy
+
+networks:
+  traefik_public:
+    external: true
+  socket_proxy:
+    external: true
