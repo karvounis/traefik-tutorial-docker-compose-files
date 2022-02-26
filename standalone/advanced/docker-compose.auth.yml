@@ -15,6 +15,7 @@ services:
       - --providers.docker.network=traefik_public
       # File provider configuration
       - --providers.file.directory=/traefik/config/my_dynamic_conf
+      - --ping=true
       # Logging configuration
       - --log.level=info
       - --log.format=json
@@ -42,6 +43,12 @@ services:
       - traefik_public
       - socket_proxy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     depends_on:
       - socket_proxy
 
