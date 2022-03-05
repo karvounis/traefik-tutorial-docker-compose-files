@@ -13,11 +13,7 @@ repos:
     rev: v1.26.3
     hooks:
       - id: yamllint
-        args:
-          - -c=./pre-commit/.yamllint
-  - repo: https://github.com/markdownlint/markdownlint
-    rev: master
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.31.1
     hooks:
-      - id: markdownlint_docker
-        args:
-          - --config=./pre-commit/.mdlrc
+      - id: markdownlint

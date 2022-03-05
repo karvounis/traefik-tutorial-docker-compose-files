@@ -1,0 +1,33 @@
+# Configuration for markdownlint
+# https://github.com/DavidAnson/markdownlint#configuration
+
+default: true
+
+# MD004
+ul-style:
+  style: "dash"
+
+# MD010
+no-hard-tabs:
+  code_blocks: false
+
+# MD024
+no-duplicate-heading:
+  siblings_only: true
+
+# MD048
+code-fence-style:
+  style: "backtick"
+
+# MD035
+hr-style:
+  style: "---"
+
+# Disabled Rules
+# https://github.com/DavidAnson/markdownlint/blob/master/doc/Rules.md
+
+# MD013
+line-length: false
+
+# MD014
+commands-show-output: false
